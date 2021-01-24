@@ -1,5 +1,5 @@
 // Package bit is home to the bitrange datastructure which is basically an
-// ordered list of bit of finite length. It is a packed format.
+// ordered list of bits of finite length. It is a packed format.
 package bit
 
 import (
@@ -87,6 +87,6 @@ func (o *Range) Marshal() ([]byte, error) {
 	return json.Marshal(*o)
 }
 
-func (o *Range) UnMarshall(data []byte) error {
+func (o *Range) UnMarshal(data []byte) error {
 	return json.Unmarshal(data, o)
 }
