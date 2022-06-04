@@ -5,6 +5,7 @@ package bit
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 )
 
 // Range defines the structure of a bitrange
@@ -59,8 +60,28 @@ func (o *Range) Set(position int) error {
 	return nil
 }
 
-// Zeroes returns the number of bits that have been unset as well as their
-// position in the bitrange.
+// IsSet returns true if the bit located at the given position in the bitrange is set.
+// If the position is out-of-bonds for the bitrange, it panics.
+// The position starts from 1 (first element).
+func (o *Range) IsSet(position int) bool {
+	if position > o.size || position < 1 {
+		panic("position out-of-bounds: " + strconv.Itoa(position) + " not between 1 and " + strconv.Itoa(o.size))
+	}
+	// Let's find where the bit is stored
+	index := position - 1
+	r := index % 64
+	l := (index - r) / 64
+	if l > len(o.Array)-1 && r != 0 {
+		// the bit we are looking for is located in the Leftover
+		return (o.Leftover & (1 << r)) != 0
+	}
+	// the bit is stored in o.Array[l]
+	return (o.Array[l] & (1 << r)) != 0
+}
+
+// Zeroes returns the unpacked representation of the bitrange as a
+// slice of integers. Each integer is the position of an unset bit in the range.
+// Finally, the total number of zeroes is returned.
 func (o *Range) Zeroes() (list []int, count int) {
 	list = make([]int, 0, o.size)
 	for k := 0; k < len(o.Array); k++ {
@@ -68,19 +89,17 @@ func (o *Range) Zeroes() (list []int, count int) {
 		for i := 0; i < 64; i++ {
 			if (n & (1 << (i))) == 0 {
 				list = append(list, i+1+k*64)
-				count++
 			}
 		}
 	}
-	if o.Leftover != 0 {
-		for i := 0; i < o.LeftoverBitCount; i++ {
-			if (o.Leftover & (1 << i)) == 0 {
-				list = append(list, i+1+len(o.Array)*64)
-				count++
-			}
+
+	for i := 0; i < o.LeftoverBitCount; i++ {
+		if (o.Leftover & (1 << i)) == 0 {
+			list = append(list, i+1+len(o.Array)*64)
 		}
 	}
-	return list, count
+
+	return list, o.size - o.count
 }
 
 func (o *Range) Marshal() ([]byte, error) {
